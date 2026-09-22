@@ -1,5 +1,6 @@
-$ версия go 
-версия go go1.22.5 для Windows / amd64
+```shell
+$ go version
+go version go1.22.5 windows/amd64
 
 $ go env GOPATH
-C:\Users\kирил\go
+C:\Users\kiril\go
