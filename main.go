@@ -1,22 +1,25 @@
 package main
 
-import "fmt"
-
-func twoSum(nums []int, target int) []int {
-	seen := make(map[int]int, len(nums))
-	for i, v := range nums {
-		if j, ok := seen[target-v]; ok {
-			return []int{j, i}
-		}
-		seen[v] = i
-	}
-	return nil
-}
+import (
+	"flag"
+	"fmt"
+)
 
 func main() {
-	nums := []int{2, 7, 11, 15}
-	target := 9
 
-	result := twoSum(nums, target)
-	fmt.Printf("twoSum(%v, %d) = %v\n", nums, target, result)
+	wordPtr := flag.String("word", "foo", "a string")
+
+	numbPtr := flag.Int("numb", 42, "an int")
+	forkPtr := flag.Bool("fork", false, "a bool")
+
+	var svar string
+	flag.StringVar(&svar, "svar", "bar", "a string var")
+
+	flag.Parse()
+
+	fmt.Println("word:", *wordPtr)
+	fmt.Println("numb:", *numbPtr)
+	fmt.Println("fork:", *forkPtr)
+	fmt.Println("svar:", svar)
+	fmt.Println("tail:", flag.Args())
 }
