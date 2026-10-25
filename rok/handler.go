@@ -17,7 +17,7 @@ func NewHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /load-movies", api.list)
 	mux.HandleFunc("GET /last-movie", api.get)
-	mux.HandleFunc("GET /swagger/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /swagger", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "swagger.html")
 	})
 	mux.HandleFunc("GET /openapi.json", func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func (a *API) list(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, result.Movies)
 }
 
 func (a *API) get(w http.ResponseWriter, r *http.Request) {
