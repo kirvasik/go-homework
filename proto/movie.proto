@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+// Эта опция должна быть только одна и идти в самом начале
+option go_package = "github.com/kirvasik/go-homework/gen/moviesv1;moviesv1";
+
+package moviesv1;
+
+message GetLastMovieRequest {
+}
+
+message LoadMoviesRequest {
+  int32 from = 1;
+  int32 to = 2;
+}
+
+message LoadMoviesResponse {
+  repeated Movie movies = 1; 
+  repeated FailedID errors = 2;
+}
+
+message Movie {
+  int32 id = 1;
+  string title = 2;
+  int32 year = 3;
+  string director = 4;
+}
+
+message FailedID {
+  int32 id = 1;
+  string error = 2;
+}
+
+service MovieService {
+  rpc LoadMovies(LoadMoviesRequest) returns (LoadMoviesResponse);
+  rpc GetLastMovie(GetLastMovieRequest) returns (Movie);
+}
