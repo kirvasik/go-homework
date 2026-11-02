@@ -1,22 +1,24 @@
-package rok
+package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
-	"time"
+
+	"github.com/kirvasik/go-homework/rok/domain"
+	"github.com/kirvasik/go-homework/rok/usecase"
 )
 
-type API struct{}
+type HTTP struct {
+	uc usecase.MovieUseCase
+}
 
-func NewHandler() http.Handler {
-	api := &API{}
+func NewHTTP(uc usecase.MovieUseCase) http.Handler {
+	h := &HTTP{uc: uc}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /load-movies", api.list)
-	mux.HandleFunc("GET /last-movie", api.get)
+	mux.HandleFunc("GET /load-movies", h.loadMovies)
+	mux.HandleFunc("GET /last-movie", h.getLastMovie)
 	mux.HandleFunc("GET /swagger/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "swagger.html")
 	})
@@ -27,59 +29,48 @@ func NewHandler() http.Handler {
 	return mux
 }
 
-func (a *API) list(w http.ResponseWriter, r *http.Request) {
+func (h *HTTP) loadMovies(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-
 	fromStr, toStr := q.Get("from"), q.Get("to")
 	if fromStr == "" || toStr == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "from and to are required"})
 		return
 	}
 	from, err := strconv.Atoi(fromStr)
-	if err != nil || from < 1 {
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid from"})
 		return
 	}
 	to, err := strconv.Atoi(toStr)
-	if err != nil || to < from {
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid to"})
 		return
 	}
 
-	result, err := run(r.Context(), Config{
-		From: from, To: to, Workers: 10, Timeout: 10 * time.Second,
-	})
+	res, err := h.uc.LoadMovies(r.Context(), from, to)
 	if err != nil {
 		switch {
 		case errors.Is(err, context.DeadlineExceeded):
 			writeJSON(w, http.StatusGatewayTimeout, map[string]string{"error": "timeout"})
 		case errors.Is(err, context.Canceled):
-
+			return
 		default:
-			writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
+			writeJSON(w, httpStatusForError(err), map[string]string{"error": err.Error()})
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, res)
 }
 
-func (a *API) get(w http.ResponseWriter, r *http.Request) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	m, err := LastMovie(r.Context(), client)
+func (h *HTTP) getLastMovie(w http.ResponseWriter, r *http.Request) {
+	m, err := h.uc.GetLastMovie(r.Context())
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 			return
 		}
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
+		writeJSON(w, httpStatusForError(err), map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, m)
-}
-func writeJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(value); err != nil {
-		log.Printf("write response: %v", err)
-	}
 }
