@@ -22,7 +22,7 @@ func NewGRPC(uc usecase.MovieUseCase) *GRPC {
 
 func (s *GRPC) LoadMovies(ctx context.Context, req *pb.LoadMoviesRequest) (*pb.LoadMoviesResponse, error) {
 	res, err := s.uc.LoadMovies(ctx, int(req.From), int(req.To))
-	if err != nil {ы
+	if err != nil {
 		if errors.Is(err, domain.ErrInvalidRange) {
 			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
