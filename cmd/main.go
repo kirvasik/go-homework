@@ -36,7 +36,6 @@ func main() {
 	httpHandler := handler.NewHTTP(uc)
 	grpcHandler := handler.NewGRPC(uc)
 
-	// --- HTTP сервер ---
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           httpHandler,

@@ -1,0 +1,120 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Movies API",
+    "version": "1.0.0",
+    "description": "Учебный HTTP API для загрузки фильмов."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/load-movies": {
+      "get": {
+        "summary": "Загрузить фильмы",
+        "description": "Загружает фильмы со стенда в диапазоне [from; to]",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список фильмов",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверные параметры from/to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/last-movie": {
+      "get": {
+        "summary": "Последний фильм",
+        "description": "Возвращает последний доступный фильм",
+        "responses": {
+          "200": {
+            "description": "Последний фильм",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Movie"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Movie": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "year": { "type": "integer" },
+          "director": { "type": "string" }
+        }
+      },
+      "FailedID": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "error": { "type": "string" }
+        }
+      },
+      "LoadResponse": {
+        "type": "object",
+        "properties": {
+          "movies": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Movie" }
+          },
+          "errors": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/FailedID" }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}

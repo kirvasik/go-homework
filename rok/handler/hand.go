@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"net/http"
 	"strconv"
@@ -9,6 +10,25 @@ import (
 	"github.com/kirvasik/go-homework/rok/domain"
 	"github.com/kirvasik/go-homework/rok/usecase"
 )
+
+//go:embed swagger.html openapi.json
+var staticFS embed.FS
+
+type movieResponse struct {
+	ID       int    `json:"id"`
+	Title    string `json:"title"`
+	Year     int    `json:"year"`
+	Director string `json:"director"`
+}
+
+func toMovieResponse(m domain.Movie) movieResponse {
+	return movieResponse{
+		ID:       m.ID,
+		Title:    m.Title,
+		Year:     m.Year,
+		Director: m.Director,
+	}
+}
 
 type HTTP struct {
 	uc usecase.MovieUseCase
@@ -20,11 +40,22 @@ func NewHTTP(uc usecase.MovieUseCase) http.Handler {
 	mux.HandleFunc("GET /load-movies", h.loadMovies)
 	mux.HandleFunc("GET /last-movie", h.getLastMovie)
 	mux.HandleFunc("GET /swagger/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "swagger.html")
+		data, err := staticFS.ReadFile("swagger.html")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(data)
 	})
 	mux.HandleFunc("GET /openapi.json", func(w http.ResponseWriter, r *http.Request) {
+		data, err := staticFS.ReadFile("openapi.json")
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
-		http.ServeFile(w, r, "openapi.json")
+		w.Write(data)
 	})
 	return mux
 }
@@ -59,7 +90,12 @@ func (h *HTTP) loadMovies(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, res)
+
+	out := make([]movieResponse, 0, len(res.Movies))
+	for _, m := range res.Movies {
+		out = append(out, toMovieResponse(m))
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *HTTP) getLastMovie(w http.ResponseWriter, r *http.Request) {
@@ -72,5 +108,5 @@ func (h *HTTP) getLastMovie(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, httpStatusForError(err), map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, m)
+	writeJSON(w, http.StatusOK, toMovieResponse(m))
 }
