@@ -56,6 +56,12 @@ func (s *GRPC) GetLastMovie(ctx context.Context, _ *pb.GetLastMovieRequest) (*pb
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "movie not found")
 		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, status.Error(codes.DeadlineExceeded, "timeout")
+		}
+		if errors.Is(err, context.Canceled) {
+			return nil, status.Error(codes.Canceled, "request canceled")
+		}
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	return &pb.Movie{
@@ -64,4 +70,5 @@ func (s *GRPC) GetLastMovie(ctx context.Context, _ *pb.GetLastMovieRequest) (*pb
 		Year:     int32(m.Year),
 		Director: m.Director,
 	}, nil
+
 }

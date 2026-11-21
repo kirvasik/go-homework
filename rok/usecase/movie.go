@@ -6,28 +6,21 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/kirvasik/go-homework/rok/domain"
 )
 
-const (
-	defaultWorkers = 10
-
-	defaultTimeout = 10 * time.Second
-
-	lastMovieMaxID = 99999
-)
+const defaultWorkers = 10
 
 type movieUseCase struct {
-	provider MovieProvider
-	workers  int
+	repo    MovieRepository
+	workers int
 }
 
-func NewMovieUseCase(provider MovieProvider) MovieUseCase {
+func NewMovieUseCase(repo MovieRepository) MovieUseCase {
 	return &movieUseCase{
-		provider: provider,
-		workers:  defaultWorkers,
+		repo:    repo,
+		workers: defaultWorkers,
 	}
 }
 
@@ -42,9 +35,6 @@ func (u *movieUseCase) LoadMovies(ctx context.Context, from, to int) (domain.Loa
 		return domain.LoadResult{}, fmt.Errorf("%w: from=%d, to=%d", domain.ErrInvalidRange, from, to)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
-	defer cancel()
-
 	jobs := make(chan int)
 	results := make(chan result)
 
@@ -53,7 +43,14 @@ func (u *movieUseCase) LoadMovies(ctx context.Context, from, to int) (domain.Loa
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			u.worker(ctx, jobs, results)
+			for id := range jobs {
+				m, err := u.repo.GetMovie(ctx, id)
+				select {
+				case results <- result{id: id, movie: m, err: err}:
+				case <-ctx.Done():
+					return
+				}
+			}
 		}()
 	}
 
@@ -82,10 +79,18 @@ func (u *movieUseCase) LoadMovies(ctx context.Context, from, to int) (domain.Loa
 			if errors.Is(r.err, context.Canceled) || errors.Is(r.err, context.DeadlineExceeded) {
 				return res, r.err
 			}
-			res.Errors = append(res.Errors, domain.FailedID{ID: r.id, Error: r.err.Error()})
+			if errors.Is(r.err, domain.ErrNotFound) {
+				res.Errors = append(res.Errors, domain.FailedID{ID: r.id, Error: r.err.Error()})
+			} else {
+				res.Errors = append(res.Errors, domain.FailedID{ID: r.id, Error: r.err.Error()})
+			}
 			continue
 		}
 		res.Movies = append(res.Movies, r.movie)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return res, err
 	}
 
 	sort.Slice(res.Movies, func(i, j int) bool { return res.Movies[i].ID < res.Movies[j].ID })
@@ -94,39 +99,6 @@ func (u *movieUseCase) LoadMovies(ctx context.Context, from, to int) (domain.Loa
 	return res, nil
 }
 
-func (u *movieUseCase) worker(ctx context.Context, jobs <-chan int, results chan<- result) {
-	for id := range jobs {
-		m, err := u.provider.GetMovie(ctx, id)
-		select {
-		case results <- result{id: id, movie: m, err: err}:
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
 func (u *movieUseCase) GetLastMovie(ctx context.Context) (domain.Movie, error) {
-	lo, hi := 1, lastMovieMaxID
-	var last domain.Movie
-	found := false
-
-	for lo <= hi {
-		mid := (lo + hi) / 2
-		m, err := u.provider.GetMovie(ctx, mid)
-		if err != nil {
-			if errors.Is(err, domain.ErrNotFound) {
-				hi = mid - 1
-				continue
-			}
-			return domain.Movie{}, err
-		}
-		last = m
-		found = true
-		lo = mid + 1
-	}
-
-	if !found {
-		return domain.Movie{}, domain.ErrNotFound
-	}
-	return last, nil
+	return u.repo.GetLastMovie(ctx)
 }

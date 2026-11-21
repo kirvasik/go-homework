@@ -21,6 +21,16 @@ type movieResponse struct {
 	Director string `json:"director"`
 }
 
+type failedIDResponse struct {
+	ID    int    `json:"id"`
+	Error string `json:"error"`
+}
+
+type loadResponse struct {
+	Movies []movieResponse    `json:"movies"`
+	Errors []failedIDResponse `json:"errors"`
+}
+
 func toMovieResponse(m domain.Movie) movieResponse {
 	return movieResponse{
 		ID:       m.ID,
@@ -91,9 +101,15 @@ func (h *HTTP) loadMovies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := make([]movieResponse, 0, len(res.Movies))
+	out := loadResponse{
+		Movies: make([]movieResponse, 0, len(res.Movies)),
+		Errors: make([]failedIDResponse, 0, len(res.Errors)),
+	}
 	for _, m := range res.Movies {
-		out = append(out, toMovieResponse(m))
+		out.Movies = append(out.Movies, toMovieResponse(m))
+	}
+	for _, e := range res.Errors {
+		out.Errors = append(out.Errors, failedIDResponse{ID: e.ID, Error: e.Error})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -103,6 +119,11 @@ func (h *HTTP) getLastMovie(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSON(w, http.StatusGatewayTimeout, map[string]string{"error": "timeout"})
 			return
 		}
 		writeJSON(w, httpStatusForError(err), map[string]string{"error": err.Error()})
