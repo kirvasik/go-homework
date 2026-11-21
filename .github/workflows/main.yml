@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 name: Course acceptance tests
 on:
   workflow_dispatch:
@@ -12,22 +11,11 @@ on:
         default: main
         required: true
         type: string
-=======
-# Push go-courses with the workflows before using this example.
-# Copy to .github/workflows/course.yml in the student's repository.
-name: Homework
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited]
-  workflow_dispatch:
-    inputs:
->>>>>>> Task-4
       task:
         description: Homework number
         required: true
         type: choice
         options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-<<<<<<< HEAD
       solution-dir:
         description: Directory containing the student go.mod
         default: auto
@@ -112,12 +100,3 @@ jobs:
           if report.exists():
               with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
                   summary.write('### Course test report\n\n```json\n' + report.read_text() + '\n```\n')
-=======
-permissions:
-  contents: read
-jobs:
-  homework:
-    uses: vacmannnn/go-courses/.github/workflows/grade.yml@main
-    with:
-      task: ${{ inputs.task || 'auto' }}
->>>>>>> Task-4
