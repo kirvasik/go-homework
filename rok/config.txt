@@ -1,0 +1,2 @@
+MOVIE_BASE_URL=https://homeworksite.site
+HTTP_ADDR=8080
