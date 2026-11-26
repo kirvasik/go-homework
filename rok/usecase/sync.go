@@ -30,7 +30,6 @@ func SyncMovies(ctx context.Context, client *adapter.MovieClient, repo *adapter.
 	}
 
 	for id := startID + 1; id <= limit; id++ {
-		log.Printf("SYNC: скачиваю id=%d", id)
 		m, err := client.GetMovie(ctx, id)
 		if err != nil {
 			if errors.Is(err, domain.ErrNotFound) {
