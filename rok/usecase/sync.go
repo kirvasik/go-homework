@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/kirvasik/go-homework/rok/adapter"
 	"github.com/kirvasik/go-homework/rok/domain"
