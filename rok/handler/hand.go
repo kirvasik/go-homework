@@ -101,15 +101,9 @@ func (h *HTTP) loadMovies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := loadResponse{
-		Movies: make([]movieResponse, 0, len(res.Movies)),
-		Errors: make([]failedIDResponse, 0, len(res.Errors)),
-	}
+	out := make([]movieResponse, 0, len(res.Movies))
 	for _, m := range res.Movies {
-		out.Movies = append(out.Movies, toMovieResponse(m))
-	}
-	for _, e := range res.Errors {
-		out.Errors = append(out.Errors, failedIDResponse{ID: e.ID, Error: e.Error})
+		out = append(out, toMovieResponse(m))
 	}
 	writeJSON(w, http.StatusOK, out)
 }
